@@ -50,6 +50,8 @@ app.use("/api/user", userRouter)
 app.use("/api/interview", apiLimiter, interviewRouter) // Protect expensive OpenRouter AI limits
 app.use("/api/payment" , paymentRouter)
 
+import path from "path";
+
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error("Global Error:", err.stack);
@@ -58,6 +60,18 @@ app.use((err, req, res, next) => {
         message: err.message || "Internal Server Error",
     });
 });
+
+// V2 Deploy: Serve Frontend Locally from Express in Production environments
+const __dirname = path.resolve();
+if (process.env.NODE_ENV === "production") {
+    // Tell express where the React compiled bundle lives
+    app.use(express.static(path.join(__dirname, "../client/dist")));
+
+    // Forward all non-API routes to the React Router DOM
+    app.get("*", (req, res) => {
+        res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
+    });
+}
 
 const PORT = process.env.PORT || 6000
 app.listen(PORT , ()=>{
