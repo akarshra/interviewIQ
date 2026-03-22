@@ -30,7 +30,8 @@ It simulates real interview scenarios using AI and provides structured responses
 - MongoDB
 - Mongoose
 - JWT Authentication
-- OpenAI API
+- OpenRouter (LLM API)
+- Razorpay (Payments)
 
 ---
 
@@ -67,10 +68,13 @@ npm install
 Create a `.env` file inside the **server** folder and add:
 
 ```
-MONGO_URI=your_mongodb_connection_string
+MONGODB_URL=your_mongodb_connection_string
 JWT_SECRET=your_secret_key
-OPENAI_API_KEY=your_openai_key
-PORT=5000
+OPENROUTER_API_KEY=your_openrouter_key
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+CORS_ORIGIN=http://localhost:5173
+PORT=6000
 ```
 
 Run backend:
@@ -88,7 +92,7 @@ Open a new terminal:
 ```bash
 cd client
 npm install
-npm start
+npm run dev
 ```
 
 ---
@@ -106,10 +110,19 @@ npm start
 
 The project requires the following environment variables:
 
-- `MONGO_URI`
+- `MONGODB_URL` (or `MONGO_URI`)
 - `JWT_SECRET`
-- `OPENAI_API_KEY`
+- `OPENROUTER_API_KEY`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `CORS_ORIGIN`
 - `PORT`
+
+Frontend env:
+
+- `VITE_API_URL`
+- `VITE_RAZORPAY_KEY_ID`
+- `VITE_FIREBASE_APIKEY`
 
 ⚠️ Do NOT commit `.env` file to GitHub.
 

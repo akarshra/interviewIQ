@@ -1,87 +1,98 @@
 import Payment from "../models/payment.model.js";
 import User from "../models/user.model.js";
-import razorpay from "../services/razorpay.service.js";
-import crypto from "crypto"
+import stripe from "../services/stripe.service.js";
 
-export const createOrder = async (req,res) => {
+export const createCheckoutSession = async (req, res) => {
     try {
-        const {planId, amount, credits} = req.body;
-          if (!amount || !credits) {
-      return res.status(400).json({ message: "Invalid plan data" });
-    }
+        const { planId, amount, credits } = req.body;
+        if (!amount || !credits) {
+            return res.status(400).json({ message: "Invalid plan data" });
+        }
 
-     const options = {
-      amount: amount * 100, // convert to paise
-      currency: "INR",
-      receipt: `receipt_${Date.now()}`,
-    };
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            line_items: [
+                {
+                    price_data: {
+                        currency: "inr",
+                        product_data: {
+                            name: `InterviewIQ ${planId} Plan`,
+                            description: `${credits} AI Interview Credits`,
+                        },
+                        unit_amount: amount * 100, // in paise
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: "payment",
+            success_url: `${process.env.CORS_ORIGIN || "http://localhost:5173"}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.CORS_ORIGIN || "http://localhost:5173"}/pricing`,
+            metadata: {
+                userId: req.userId.toString(),
+                planId: planId.toString(),
+                credits: credits.toString(),
+            },
+        });
 
-    const order = await razorpay.orders.create(options)
+        await Payment.create({
+            userId: req.userId,
+            planId: planId,
+            amount: amount,
+            credits: credits,
+            stripeSessionId: session.id,
+            status: "created",
+        });
 
-     await Payment.create({
-      userId: req.userId,
-      planId,
-      amount,
-      credits,
-      razorpayOrderId: order.id,
-      status: "created",
-    });
+        return res.json({ url: session.url });
 
-    return res.json(order);
-
-    
     } catch (error) {
-         return res.status(500).json({message:`failed to create Razorpay order ${error}`})
+        console.error("Create Checkout Session error:", error);
+        return res.status(500).json({ message: "An internal server error occurred while creating Stripe checkout session." });
     }
 }
 
 
-export const verifyPayment = async (req,res) => {
+export const stripeWebhook = async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    
+    let event;
+
     try {
-        const {razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature} = req.body
-
-      const body = razorpay_order_id + "|" + razorpay_payment_id;
-
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(body)
-      .digest("hex");
-
-    if (expectedSignature !== razorpay_signature) {
-      return res.status(400).json({ message: "Invalid payment signature" });
+        if(!process.env.STRIPE_WEBHOOK_SECRET) {
+            console.log("No Stripe Webhook secret provided in .env, skipping signature verification.");
+            event = req.body;
+        } else {
+            event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        }
+    } catch (err) {
+        console.error("Webhook signature verification failed:", err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-     const payment = await Payment.findOne({
-      razorpayOrderId: razorpay_order_id,
-    });
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
 
-    if (!payment) {
-      return res.status(404).json({ message: "Payment not found" });
+        const payment = await Payment.findOne({ stripeSessionId: session.id });
+        if (!payment) {
+            console.error("Payment not found for session:", session.id);
+            return res.status(404).json({ message: "Payment not found" });
+        }
+
+        if (payment.status === "paid") {
+            return res.json({ message: "Already processed" });
+        }
+
+        payment.status = "paid";
+        payment.stripePaymentIntentId = session.payment_intent;
+        await payment.save();
+
+        const updatedUser = await User.findByIdAndUpdate(payment.userId, {
+            $inc: { credits: payment.credits }
+        }, { new: true });
+
+        console.log(`Payment successful. Credits added to user ID: ${payment.userId}`);
     }
 
-    if (payment.status === "paid") {
-      return res.json({ message: "Already processed" });
-    }
-
-    // Update payment record
-    payment.status = "paid";
-    payment.razorpayPaymentId = razorpay_payment_id;
-    await payment.save();
-
-    // Add credits to user
-    const updatedUser = await User.findByIdAndUpdate(payment.userId, {
-      $inc: { credits: payment.credits }
-    },{new:true});
-
-    res.json({
-      success: true,
-      message: "Payment verified and credits added",
-      user: updatedUser,
-    });
-
-    } catch (error) {
-         return res.status(500).json({message:`failed to verify Razorpay payment ${error}`})
-    }
+    // Return a 200 response to acknowledge receipt of the event
+    res.json({ received: true });
 }

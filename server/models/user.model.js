@@ -8,11 +8,33 @@ const userSchema = new mongoose.Schema({
     email:{
         type:String,
         unique:true,
-        required:true
+        required:true,
+        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address']
+    },
+    password:{
+        type:String,
+        required:false // Optional for Google Auth users
+    },
+    googleId:{
+        type:String,
+        unique:true,
+        sparse:true
     },
     credits:{
         type:Number,
         default:1000
+    },
+    currentStreak: {
+        type: Number,
+        default: 0
+    },
+    longestStreak: {
+        type: Number,
+        default: 0
+    },
+    lastInterviewDate: {
+        type: Date,
+        default: null
     }
 
 }, {timestamps:true})

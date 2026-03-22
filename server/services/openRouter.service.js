@@ -5,6 +5,10 @@ export const askAi = async (messages) => {
         if(!messages || !Array.isArray(messages) || messages.length === 0) {
             throw new Error("Messages array is empty.");
         }
+        const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+            throw new Error("Missing AI API key (set OPENROUTER_API_KEY)");
+        }
         const response = await axios.post("https://openrouter.ai/api/v1/chat/completions",
             {
                 model: "openai/gpt-4o-mini",
@@ -13,7 +17,7 @@ export const askAi = async (messages) => {
             },
             {
             headers: {
-            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
         },});
 

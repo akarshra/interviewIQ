@@ -3,15 +3,16 @@ import { Route, Routes } from 'react-router-dom'
 import Home from './pages/Home'
 import Auth from './pages/Auth'
 import { useEffect } from 'react'
-import axios from 'axios'
 import { useDispatch } from 'react-redux'
 import { setUserData } from './redux/userSlice'
 import InterviewPage from './pages/InterviewPage'
 import InterviewHistory from './pages/InterviewHistory'
 import Pricing from './pages/Pricing'
 import InterviewReport from './pages/InterviewReport'
-
-export const ServerUrl  = "https://interviewiq-qz26.onrender.com"
+import InterviewDesign from './pages/InterviewDesign'
+import Success from './pages/Success'
+import Analytics from './pages/Analytics'
+import { api } from './utils/apiClient'
 
 function App() {
 
@@ -19,7 +20,7 @@ function App() {
   useEffect(()=>{
     const getUser = async () => {
       try {
-        const result = await axios.get(ServerUrl + "/api/user/current-user", {withCredentials:true})
+        const result = await api.get("/api/user/current-user")
         dispatch(setUserData(result.data))
       } catch (error) {
         console.log(error)
@@ -37,6 +38,9 @@ function App() {
       <Route path='/history' element={<InterviewHistory/>}/>
       <Route path='/pricing' element={<Pricing/>}/>
       <Route path='/report/:id' element={<InterviewReport/>}/>
+      <Route path='/design' element={<InterviewDesign/>}/>
+      <Route path='/success' element={<Success/>}/>
+      <Route path='/analytics' element={<Analytics/>}/>
 
 
 

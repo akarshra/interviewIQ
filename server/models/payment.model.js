@@ -9,8 +9,8 @@ const paymentSchema = new mongoose.Schema({
     planId: String,
     amount: Number,
     credits: Number,
-    razorpayOrderId: String,
-    razorpayPaymentId: String,
+    stripeSessionId: String,
+    stripePaymentIntentId: String,
     status: {
       type: String,
       enum: ["created", "paid", "failed"],
