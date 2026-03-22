@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: interviewiq-fullstack
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: "npm install --prefix server && npm install --prefix client --legacy-peer-deps && npm run build --prefix client"
+    startCommand: "npm start --prefix server"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_FIREBASE_APIKEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: SMTP_EMAIL
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
