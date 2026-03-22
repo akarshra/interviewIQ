@@ -88,7 +88,7 @@ function Navbar() {
                                 setShowUserPopup(!showUserPopup);
                                 setShowCreditPopup(false)
                             }} className='w-10 h-10 bg-gradient-to-br from-indigo-500 to-cyan-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-inner hover:scale-105 transition-transform border border-white/10'>
-                                {userData?.name.slice(0,1).toUpperCase()}
+                                {userData?.name ? userData.name.charAt(0).toUpperCase() : "U"}
                             </button>
 
                             {showUserPopup && (
