@@ -23,17 +23,17 @@ app.use(helmet());
 
 // Rate Limiting (100 requests per 15 mins)
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 100, 
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: "Too many requests from this IP, please try again after 15 minutes",
     standardHeaders: true,
     legacyHeaders: false,
 });
 
 const corsOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
 app.use(cors({
     origin: corsOrigins,
@@ -44,13 +44,13 @@ app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }))
 app.use(cookieParser())
 
 app.get("/health", (req, res) => {
-  res.status(200).json({ ok: true });
+    res.status(200).json({ ok: true });
 });
 
-app.use("/api/auth" , authRouter)
+app.use("/api/auth", authRouter)
 app.use("/api/user", userRouter)
 app.use("/api/interview", apiLimiter, interviewRouter) // Protect expensive OpenRouter AI limits
-app.use("/api/payment" , paymentRouter)
+app.use("/api/payment", paymentRouter)
 
 import path from "path";
 
@@ -70,7 +70,7 @@ if (process.env.NODE_ENV === "production") {
     app.use(express.static(path.join(__dirname, "../client/dist")));
 
     // Forward all non-API routes to the React Router DOM
-    app.get("*", (req, res) => {
+    app.get("/*", (req, res) => {
         res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
     });
 }

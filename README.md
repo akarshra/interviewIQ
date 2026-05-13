@@ -10,6 +10,7 @@ It simulates real interview scenarios using AI and provides structured responses
 
 - 🔐 User Authentication (JWT-based login/signup)
 - 🤖 AI-generated interview questions
+- 📄 Resume parsing and context extraction for personalized questions
 - 🧠 AI-powered feedback system
 - 📊 Organized interview sessions
 - 🌐 Full-stack MERN architecture
@@ -31,7 +32,8 @@ It simulates real interview scenarios using AI and provides structured responses
 - Mongoose
 - JWT Authentication
 - OpenRouter (LLM API)
-- Razorpay (Payments)
+- Stripe (Payments)
+- PDF Parsing (pdf-parse)
 
 ---
 
@@ -71,8 +73,8 @@ Create a `.env` file inside the **server** folder and add:
 MONGODB_URL=your_mongodb_connection_string
 JWT_SECRET=your_secret_key
 OPENROUTER_API_KEY=your_openrouter_key
-RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 CORS_ORIGIN=http://localhost:5173
 PORT=6000
 ```
@@ -113,15 +115,14 @@ The project requires the following environment variables:
 - `MONGODB_URL` (or `MONGO_URI`)
 - `JWT_SECRET`
 - `OPENROUTER_API_KEY`
-- `RAZORPAY_KEY_ID`
-- `RAZORPAY_KEY_SECRET`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
 - `CORS_ORIGIN`
 - `PORT`
 
 Frontend env:
 
 - `VITE_API_URL`
-- `VITE_RAZORPAY_KEY_ID`
 - `VITE_FIREBASE_APIKEY`
 
 ⚠️ Do NOT commit `.env` file to GitHub.
@@ -134,7 +135,6 @@ Frontend env:
 - Performance analytics dashboard
 - Admin panel
 - Interview history tracking
-- Resume-based question generation
 
 ---
 
