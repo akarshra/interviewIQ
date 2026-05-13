@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from "motion/react"
+import { motion as Motion, AnimatePresence } from "motion/react"
 import {
     FaUserTie,
     FaBriefcase,
@@ -21,6 +21,12 @@ function Step1SetUp({ onStart }) {
     const [role, setRole] = useState("");
     const [experience, setExperience] = useState("");
     const [mode, setMode] = useState("Technical");
+    const [difficulty, setDifficulty] = useState("Intermediate");
+    const [practiceMode, setPracticeMode] = useState(false);
+    const preferredLanguage = "javascript";
+    const [template, setTemplate] = useState("General");
+    // New Feature V2: Personality Customization
+    const [personality, setPersonality] = useState("Professional and Balanced");
     // New Feature V2: JD Gap Analysis
     const [jobDescription, setJobDescription] = useState("");
     const [gapAnalysis, setGapAnalysis] = useState(null);
@@ -42,7 +48,11 @@ function Step1SetUp({ onStart }) {
         formdata.append("resume", resumeFile)
 
         try {
-            const result = await api.post("/api/interview/resume", formdata)
+            const result = await api.post("/api/interview/resume", formdata, {
+                headers: {
+                    "Content-Type": "multipart/form-data"
+                }
+            })
             setRole(result.data.role || "");
             setExperience(result.data.experience || "");
             setProjects(result.data.projects || []);
@@ -75,8 +85,21 @@ function Step1SetUp({ onStart }) {
     const handleStart = async () => {
         setLoading(true)
         try {
-            const result = await api.post("/api/interview/generate-questions", { role, experience, mode, resumeText, projects, skills })
-            if (userData) {
+            const result = await api.post("/api/interview/generate-questions", {
+                role,
+                experience,
+                mode,
+                difficulty,
+                practiceMode,
+                preferredLanguage,
+                template,
+                jobDescription,
+                resumeText,
+                projects,
+                skills,
+                personality
+            })
+            if (userData && typeof result.data.creditsLeft === 'number') {
                 dispatch(setUserData({ ...userData, credits: result.data.creditsLeft }))
             }
             setLoading(false)
@@ -88,7 +111,7 @@ function Step1SetUp({ onStart }) {
     }
 
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
@@ -101,7 +124,7 @@ function Step1SetUp({ onStart }) {
             <div className='w-full max-w-7xl z-10 grid lg:grid-cols-12 gap-8 lg:gap-12 items-start py-8'>
 
                 {/* LEFT HERO SECTION */}
-                <motion.div
+                <Motion.div
                     initial={{ x: -50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ duration: 0.7, type: "spring" }}
@@ -126,7 +149,7 @@ function Step1SetUp({ onStart }) {
                             { icon: <BsStars />, text: "V2: JD Gap Analysis" },
                             { icon: <FaChartLine />, text: "Forensic Post-Analysis" },
                         ].map((item, index) => (
-                            <motion.div key={index}
+                            <Motion.div key={index}
                                 initial={{ y: 20, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 transition={{ delay: 0.3 + index * 0.15 }}
@@ -136,13 +159,13 @@ function Step1SetUp({ onStart }) {
                                     {item.icon}
                                 </div>
                                 <span className='text-slate-200 font-semibold tracking-wide'>{item.text}</span>
-                            </motion.div>
+                            </Motion.div>
                         ))}
                     </div>
-                </motion.div>
+                </Motion.div>
 
                 {/* RIGHT CONTROL PANEL */}
-                <motion.div
+                <Motion.div
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ duration: 0.7, type: "spring", delay: 0.1 }}
@@ -185,7 +208,7 @@ function Step1SetUp({ onStart }) {
                         </div>
                     </div>
 
-                    <div className='space-y-6'>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                         {/* Mode Select */}
                         <div className="relative group">
                             <select 
@@ -200,6 +223,77 @@ function Step1SetUp({ onStart }) {
                                 ▼
                             </div>
                         </div>
+
+                        {/* Difficulty Select */}
+                        <div className="relative group">
+                            <select 
+                                value={difficulty}
+                                onChange={(e) => setDifficulty(e.target.value)}
+                                className='w-full py-4 px-4 bg-black/40 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white outline-none transition-all shadow-inner font-medium appearance-none cursor-pointer'
+                            >
+                                <option value="Beginner" className="bg-[#15151A]">Beginner</option>
+                                <option value="Intermediate" className="bg-[#15151A]">Intermediate</option>
+                                <option value="Expert" className="bg-[#15151A]">Expert</option>
+                            </select>
+                            <div className="absolute top-1/2 right-6 -translate-y-1/2 pointer-events-none text-slate-500">
+                                ▼
+                            </div>
+                        </div>
+
+
+
+                        {/* Interview Template Select */}
+                        <div className="relative group md:col-span-2">
+                            <select 
+                                value={template}
+                                onChange={(e) => setTemplate(e.target.value)}
+                                className='w-full py-4 px-4 bg-black/40 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white outline-none transition-all shadow-inner font-medium appearance-none cursor-pointer'
+                            >
+                                <option value="General" className="bg-[#15151A]">General</option>
+                                <option value="Frontend" className="bg-[#15151A]">Frontend / React</option>
+                                <option value="Backend" className="bg-[#15151A]">Backend / Node</option>
+                                <option value="Data Science" className="bg-[#15151A]">Data Science / ML</option>
+                                <option value="Systems" className="bg-[#15151A]">Systems / Algorithms</option>
+                            </select>
+                            <div className="absolute top-1/2 right-6 -translate-y-1/2 pointer-events-none text-slate-500">
+                                ▼
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className='flex flex-col gap-4'>
+                        <div className='relative group'>
+                            <select 
+                                value={personality}
+                                onChange={(e) => setPersonality(e.target.value)}
+                                className='w-full py-4 px-4 bg-black/40 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white outline-none transition-all shadow-inner font-medium appearance-none cursor-pointer'
+                            >
+                                <option value="Professional and Balanced" className="bg-[#15151A]">Balanced (Standard)</option>
+                                <option value="Friendly and Encouraging" className="bg-[#15151A]">Encouraging & Helpful</option>
+                                <option value="Aggressive and Detailed" className="bg-[#15151A]">Aggressive & Critical</option>
+                                <option value="Socratic and Pedantic" className="bg-[#15151A]">Socratic (Asking why constantly)</option>
+                            </select>
+                            <div className="absolute top-1/2 right-6 -translate-y-1/2 pointer-events-none text-slate-500">
+                                ▼
+                            </div>
+                        </div>
+
+                        <button
+                          onClick={() => setPracticeMode(!practiceMode)}
+                          type="button"
+                          className={`w-full rounded-2xl py-4 text-left border transition-all ${practiceMode ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200' : 'border-white/10 bg-black/40 text-slate-200 hover:border-indigo-500/50 hover:bg-indigo-500/10'}`}
+                        >
+                          <div className='flex items-center justify-between'>
+                            <div>
+                              <p className='font-semibold'>Practice Mode</p>
+                              <p className='text-xs text-slate-400'>No credits consumed, ideal for rehearsal and code-focused questions.</p>
+                            </div>
+                            <span className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-[10px] font-bold uppercase ${practiceMode ? 'bg-emerald-400 text-black' : 'bg-slate-700 text-slate-300'}`}>
+                              {practiceMode ? 'Enabled' : 'Off'}
+                            </span>
+                          </div>
+                        </button>
+                    </div>
 
                         {/* Job Description (V2 Feature) */}
                         <div className='relative group'>
@@ -216,7 +310,7 @@ function Step1SetUp({ onStart }) {
 
                         <AnimatePresence mode="popLayout">
                             {!analysisDone ? (
-                                <motion.div
+                                <Motion.div
                                     key="upload"
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: "auto" }}
@@ -246,7 +340,7 @@ function Step1SetUp({ onStart }) {
                                     </div>
 
                                     {resumeFile && (
-                                        <motion.button
+                                        <Motion.button
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             onClick={(e) => {
@@ -266,11 +360,11 @@ function Step1SetUp({ onStart }) {
                                                     <BsLightningChargeFill className="text-yellow-400" /> Analyze Resume Context
                                                 </>
                                             )}
-                                        </motion.button>
+                                        </Motion.button>
                                     )}
-                                </motion.div>
+                                </Motion.div>
                             ) : (
-                                <motion.div
+                                <Motion.div
                                     key="analysis"
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
@@ -299,7 +393,7 @@ function Step1SetUp({ onStart }) {
 
                                     {/* GAP ANALYSIS RESULTS BLOCK */}
                                     {gapAnalysis && (
-                                        <motion.div 
+                                        <Motion.div 
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: "auto" }}
                                             className="mt-4 p-5 bg-[#1A1A1E] border border-white/10 rounded-xl mb-4 relative overflow-hidden"
@@ -327,7 +421,7 @@ function Step1SetUp({ onStart }) {
                                                     </ul>
                                                 </div>
                                             </div>
-                                        </motion.div>
+                                        </Motion.div>
                                     )}
 
                                     {skills.length > 0 && (
@@ -344,12 +438,12 @@ function Step1SetUp({ onStart }) {
                                             </div>
                                         </div>
                                     )}
-                                </motion.div>
+                                </Motion.div>
                             )}
                         </AnimatePresence>
 
                         {/* Start Action Button */}
-                        <motion.button
+                        <Motion.button
                             onClick={handleStart}
                             disabled={!role || !experience || loading}
                             whileHover={!(!role || !experience || loading) ? { scale: 1.02 } : {}}
@@ -366,10 +460,9 @@ function Step1SetUp({ onStart }) {
                                     <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                                     Initializing Engine...
                                 </span>
-                            ) : "Commence Interview"}
-                        </motion.button>
-                    </div>
-                </motion.div>
+                            ) : practiceMode ? "Start Practice Session" : "Commence Interview"}
+                        </Motion.button>
+                </Motion.div>
             </div>
             
             <style dangerouslySetInnerHTML={{__html: `
@@ -381,7 +474,7 @@ function Step1SetUp({ onStart }) {
                     100% { transform: translateX(100%); }
                 }
             `}} />
-        </motion.div>
+        </Motion.div>
     )
 }
 

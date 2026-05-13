@@ -1,5 +1,5 @@
 import fs from "fs"
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import { askAi } from "../services/openRouter.service.js";
 import { sendInterviewReportEmail } from "../services/email.service.js";
 import User from "../models/user.model.js";
@@ -52,8 +52,6 @@ Be critical, realistic, and brutally honest. Keep array items strictly under 15 
   }
 }
 
-import Interview from "../models/interview.model.js";
-
 function extractJsonObject(text) {
   if (!text || typeof text !== "string") return null;
   const first = text.indexOf("{");
@@ -71,9 +69,10 @@ export const analyzeResume = async (req, res) => {
 
     const fileBuffer = await fs.promises.readFile(filepath)
     
-    // Use pdf-parse instead of pdfjs-dist for reliable Node.js parsing
-    const pdfData = await pdfParse(fileBuffer);
-    let resumeText = pdfData.text;
+    const parser = new PDFParse({ data: fileBuffer });
+    const pdfData = await parser.getText();
+    let resumeText = pdfData.text || "";
+    await parser.destroy();
 
     resumeText = resumeText
       .replace(/\s+/g, " ")
@@ -116,7 +115,13 @@ Return strictly JSON:
       parsed = JSON.parse(jsonText);
     }
 
-    fs.unlinkSync(filepath)
+    try {
+      if (fs.existsSync(filepath)) {
+        await fs.promises.unlink(filepath);
+      }
+    } catch (err) {
+      console.error("Failed to cleanup file:", err);
+    }
 
 
     res.json({
@@ -130,8 +135,12 @@ Return strictly JSON:
   } catch (error) {
     console.error(error);
 
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    try {
+      if (req.file && fs.existsSync(req.file.path)) {
+        await fs.promises.unlink(req.file.path);
+      }
+    } catch (err) {
+      // Ignore
     }
 
     return res.status(500).json({ message: "An internal server error occurred during resume analysis." });
@@ -141,11 +150,15 @@ Return strictly JSON:
 
 export const generateQuestion = async (req, res) => {
   try {
-    let { role, experience, mode, resumeText, projects, skills } = req.body
+    let { role, experience, mode, difficulty, preferredLanguage, template, practiceMode, jobDescription, resumeText, projects, skills, personality } = req.body
 
     role = role?.trim();
     experience = experience?.trim();
     mode = mode?.trim();
+    difficulty = difficulty?.trim() || "Intermediate";
+    preferredLanguage = preferredLanguage?.trim() || "javascript";
+    template = template?.trim() || "General";
+    practiceMode = Boolean(practiceMode);
 
     if (!role || !experience || !mode) {
       return res.status(400).json({ message: "Role, Experience and Mode are required." })
@@ -159,7 +172,7 @@ export const generateQuestion = async (req, res) => {
       });
     }
 
-    if (user.credits < 50) {
+    if (!practiceMode && user.credits < 50) {
       return res.status(400).json({
         message: "Not enough credits. Minimum 50 required."
       });
@@ -174,14 +187,22 @@ export const generateQuestion = async (req, res) => {
       : "None";
 
     const safeResume = resumeText?.trim() || "None";
+    const safeJd = jobDescription?.trim() ? `JobDescription:\n${jobDescription.trim()}` : "";
+    const safePersonality = personality?.trim() || "Professional and Balanced";
 
     const userPrompt = `
-    Role:${role}
-    Experience:${experience}
-    InterviewMode:${mode}
-    Projects:${projectText}
-    Skills:${skillsText},
-    Resume:${safeResume}
+    Role: ${role}
+    Experience: ${experience}
+    InterviewMode: ${mode}
+    DifficultyLevel: ${difficulty}
+    PreferredLanguage: ${preferredLanguage}
+    InterviewTemplate: ${template}
+    SessionType: ${practiceMode ? 'Practice' : 'Scored'}
+    InterviewerPersonality: ${safePersonality}
+    Projects: ${projectText}
+    Skills: ${skillsText}
+    Resume: ${safeResume}
+    ${safeJd}
     `;
 
     if (!userPrompt.trim()) {
@@ -210,6 +231,7 @@ Strict Rules:
 - One question per line only.
 - Keep language simple and conversational.
 - Questions must feel practical and realistic.
+- Adopt the InterviewerPersonality heavily in tone: ${safePersonality}
 
 Difficulty progression:
 Question 1 → easy  
@@ -219,6 +241,7 @@ Question 4 → medium
 Question 5 → hard  
 
 Make questions based on the candidate’s role, experience,interviewMode, projects, skills, and resume details.
+If a JobDescription is provided, ensure questions directly evaluate the candidate against the specific technologies and requirements mentioned.
 `
       }
       ,
@@ -252,15 +275,23 @@ Make questions based on the candidate’s role, experience,interviewMode, projec
       });
     }
 
-    user.credits -= 50;
-    await user.save();
+    if (!practiceMode) {
+      user.credits -= 50;
+      await user.save();
+    }
 
     const interview = await Interview.create({
       userId: user._id,
       role,
       experience,
       mode,
+      difficulty,
+      practiceMode,
+      preferredLanguage,
+      template,
+      jobDescription: safeJd ? jobDescription : "General",
       resumeText: safeResume,
+      personality: safePersonality,
       questions: questionsArray.map((q, index) => ({
         question: q,
         difficulty: ["easy", "easy", "medium", "medium", "hard"][index],
@@ -272,7 +303,14 @@ Make questions based on the candidate’s role, experience,interviewMode, projec
       interviewId: interview._id,
       creditsLeft: user.credits,
       userName: user.name,
-      questions: interview.questions
+      questions: interview.questions,
+      difficulty: interview.difficulty,
+      practiceMode: interview.practiceMode,
+      preferredLanguage: interview.preferredLanguage,
+      template: interview.template,
+      mode: interview.mode,
+      jobDescription: interview.jobDescription,
+      resumeText: interview.resumeText,
     });
   } catch (error) {
     console.error("Generate question error:", error);
@@ -294,6 +332,9 @@ export const submitAnswer = async (req, res) => {
     const interview = await Interview.findById(interviewId)
     if (!interview) {
       return res.status(404).json({ message: "Interview not found" });
+    }
+    if (interview.userId.toString() !== req.userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized access to this interview." });
     }
     if (!Array.isArray(interview.questions) || !interview.questions[questionIndex]) {
       return res.status(400).json({ message: "Invalid questionIndex" });
@@ -335,11 +376,14 @@ You are a professional human interviewer evaluating a candidate's answer in a re
 
 Evaluate naturally and fairly, like a real person would.
 
-Score the answer in these areas (0 to 10):
+Score the answer in these areas (0 to 100):
 
 1. Confidence – Does the answer sound clear, confident, and well-presented?
 2. Communication – Is the language simple, clear, and easy to understand?
 3. Correctness – Is the answer accurate, relevant, and complete?
+4. Technical – Did they demonstrate strong fundamental technical knowledge (especially in code)?
+5. Problem Solving – Could they break down the problem structurally?
+6. Analytical Logic – Was their underlying reasoning sound, regardless of syntax?
 
 Rules:
 - Be realistic and unbiased.
@@ -349,7 +393,7 @@ Rules:
 - Consider clarity, structure, and relevance.
 
 Calculate:
-finalScore = average of confidence, communication, and correctness (rounded to nearest whole number).
+finalScore = average of all 6 traits (rounded to nearest whole number).
 
 Feedback Rules:
 - Write natural human feedback.
@@ -366,6 +410,9 @@ Return ONLY valid JSON in this format:
   "confidence": number,
   "communication": number,
   "correctness": number,
+  "technical": number,
+  "problemSolving": number,
+  "analyticalLogic": number,
   "finalScore": number,
   "feedback": "short human feedback"
 }
@@ -397,11 +444,14 @@ Answer: ${answer}
     }
 
     question.answer = answer;
-    question.confidence = parsed.confidence;
-    question.communication = parsed.communication;
-    question.correctness = parsed.correctness;
-    question.score = parsed.finalScore;
-    question.feedback = parsed.feedback;
+    question.confidence = parsed.confidence || 0;
+    question.communication = parsed.communication || 0;
+    question.correctness = parsed.correctness || 0;
+    question.technical = parsed.technical || 0;
+    question.problemSolving = parsed.problemSolving || 0;
+    question.analyticalLogic = parsed.analyticalLogic || 0;
+    question.score = parsed.finalScore || 0;
+    question.feedback = parsed.feedback || "";
     await interview.save();
 
 
@@ -424,6 +474,9 @@ export const finishInterview = async (req,res) => {
     if(!interview){
       return res.status(404).json({message:"Interview not found"})
     }
+    if (interview.userId.toString() !== req.userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized access to this interview." });
+    }
 
     const totalQuestions = interview.questions.length;
 
@@ -431,12 +484,18 @@ export const finishInterview = async (req,res) => {
     let totalConfidence = 0;
     let totalCommunication = 0;
     let totalCorrectness = 0;
+    let totalTechnical = 0;
+    let totalProblemSolving = 0;
+    let totalAnalyticalLogic = 0;
 
     interview.questions.forEach((q) => {
       totalScore += q.score || 0;
       totalConfidence += q.confidence || 0;
       totalCommunication += q.communication || 0;
       totalCorrectness += q.correctness || 0;
+      totalTechnical += q.technical || 0;
+      totalProblemSolving += q.problemSolving || 0;
+      totalAnalyticalLogic += q.analyticalLogic || 0;
     });
 
     const finalScore = totalQuestions
@@ -453,6 +512,18 @@ export const finishInterview = async (req,res) => {
 
     const avgCorrectness = totalQuestions
       ? totalCorrectness / totalQuestions
+      : 0;
+
+    const avgTechnical = totalQuestions
+      ? totalTechnical / totalQuestions
+      : 0;
+
+    const avgProblemSolving = totalQuestions
+      ? totalProblemSolving / totalQuestions
+      : 0;
+
+    const avgAnalyticalLogic = totalQuestions
+      ? totalAnalyticalLogic / totalQuestions
       : 0;
 
     interview.finalScore = finalScore;
@@ -497,6 +568,22 @@ export const finishInterview = async (req,res) => {
             }
         }
         // If lastDateStr === todayStr, they already did one today, streak stays the same.
+
+        // ==== Award Badges ====
+        if (!user.badges) user.badges = [];
+        
+        if (!user.badges.includes("First Interview")) {
+            user.badges.push("First Interview");
+        }
+        if (finalScore >= 90 && !user.badges.includes("Elite Scorer")) {
+            user.badges.push("Elite Scorer");
+        }
+        if (user.currentStreak >= 3 && !user.badges.includes("3-Day Streak")) {
+            user.badges.push("3-Day Streak");
+        }
+        if (user.currentStreak >= 7 && !user.badges.includes("7-Day Streak")) {
+            user.badges.push("7-Day Streak");
+        }
         
         await user.save();
     }
@@ -517,6 +604,9 @@ export const finishInterview = async (req,res) => {
       confidence: Number(avgConfidence.toFixed(1)),
       communication: Number(avgCommunication.toFixed(1)),
       correctness: Number(avgCorrectness.toFixed(1)),
+      technical: Number(avgTechnical.toFixed(1)),
+      problemSolving: Number(avgProblemSolving.toFixed(1)),
+      analyticalLogic: Number(avgAnalyticalLogic.toFixed(1)),
       questionWiseScore: interview.questions.map((q) => ({
         question: q.question,
         score: q.score || 0,
@@ -525,7 +615,8 @@ export const finishInterview = async (req,res) => {
         communication: q.communication || 0,
         correctness: q.correctness || 0,
       })),
-      streakUpdated: user ? user.currentStreak : 0
+      streakUpdated: user ? user.currentStreak : 0,
+      badgesUnlocked: user ? user.badges : []
     })
   } catch (error) {
     console.error("Finish interview error:", error);
@@ -538,7 +629,7 @@ export const getMyInterviews = async (req,res) => {
   try {
     const interviews = await Interview.find({userId:req.userId})
     .sort({ createdAt: -1 })
-    .select("role experience mode finalScore status createdAt");
+    .select("role experience mode difficulty practiceMode preferredLanguage template finalScore status createdAt questions");
 
     return res.status(200).json(interviews)
 
@@ -555,18 +646,26 @@ export const getInterviewReport = async (req,res) => {
     if (!interview) {
       return res.status(404).json({ message: "Interview not found" });
     }
-
+    if (interview.userId.toString() !== req.userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized access to this interview." });
+    }
 
     const totalQuestions = interview.questions.length;
 
     let totalConfidence = 0;
     let totalCommunication = 0;
     let totalCorrectness = 0;
+    let totalTechnical = 0;
+    let totalProblemSolving = 0;
+    let totalAnalyticalLogic = 0;
 
     interview.questions.forEach((q) => {
       totalConfidence += q.confidence || 0;
       totalCommunication += q.communication || 0;
       totalCorrectness += q.correctness || 0;
+      totalTechnical += q.technical || 0;
+      totalProblemSolving += q.problemSolving || 0;
+      totalAnalyticalLogic += q.analyticalLogic || 0;
     });
     const avgConfidence = totalQuestions
       ? totalConfidence / totalQuestions
@@ -580,11 +679,26 @@ export const getInterviewReport = async (req,res) => {
       ? totalCorrectness / totalQuestions
       : 0;
 
+    const avgTechnical = totalQuestions
+      ? totalTechnical / totalQuestions
+      : 0;
+
+    const avgProblemSolving = totalQuestions
+      ? totalProblemSolving / totalQuestions
+      : 0;
+
+    const avgAnalyticalLogic = totalQuestions
+      ? totalAnalyticalLogic / totalQuestions
+      : 0;
+
        return res.json({
       finalScore: interview.finalScore,
       confidence: Number(avgConfidence.toFixed(1)),
       communication: Number(avgCommunication.toFixed(1)),
       correctness: Number(avgCorrectness.toFixed(1)),
+      technical: Number(avgTechnical.toFixed(1)),
+      problemSolving: Number(avgProblemSolving.toFixed(1)),
+      analyticalLogic: Number(avgAnalyticalLogic.toFixed(1)),
       questionWiseScore: interview.questions
     });
 
@@ -593,7 +707,3 @@ export const getInterviewReport = async (req,res) => {
     return res.status(500).json({message: "An internal server error occurred while finding interview report."})
   }
 }
-
-
-
-

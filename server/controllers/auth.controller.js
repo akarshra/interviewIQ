@@ -6,15 +6,26 @@ import bcrypt from "bcryptjs";
 
 export const googleAuth = async (req,res) => {
     try {
-        const {name , email} = req.body
-        let user = await User.findOne({email})
-        if(!user){
-            user = await User.create({
-                name , 
-                email
-            })
+        const {name , email, googleId} = req.body;
+
+        if (!email) {
+            return res.status(400).json({message: "Email is required"});
         }
-        let token = await genToken(user._id)
+
+        let user = await User.findOne({email});
+        if(!user){
+            // Ensure no null validation or duplicate key index crashes occur
+            const fallbackGoogleId = googleId || Math.random().toString(36).substring(2, 15);
+            const fallbackName = name ? name : (email || "user@unknown").split("@")[0];
+
+            user = await User.create({
+                name: fallbackName,
+                email,
+                googleId: fallbackGoogleId
+            });
+        }
+
+        let token = await genToken(user._id);
         const isProd = process.env.NODE_ENV === "production";
         res.cookie("token", token, {
             httpOnly: true,
@@ -24,15 +35,12 @@ export const googleAuth = async (req,res) => {
             path: "/",
         });
 
-        return res.status(200).json(user)
-
-
+        return res.status(200).json(user);
 
     } catch (error) {
-        console.error("Google auth error:", error);
-        return res.status(500).json({message: "An internal server error occurred during Google authentication."})
+        console.error("Google auth error:", error.message, error);
+        return res.status(500).json({message: "An internal server error occurred during Google authentication."});
     }
-    
 }
 
 export const register = async (req, res) => {
@@ -73,7 +81,7 @@ export const register = async (req, res) => {
 
     } catch (error) {
         console.error("Registration error:", error);
-        return res.status(500).json({ message: "An internal server error occurred during registration." });
+        return res.status(500).json({ message: `Server error: ${error.message}` });
     }
 };
 
@@ -114,7 +122,7 @@ export const login = async (req, res) => {
 
     } catch (error) {
         console.error("Login error:", error);
-        return res.status(500).json({ message: "An internal server error occurred during login." });
+        return res.status(500).json({ message: `Server error: ${error.message}` });
     }
 };
 

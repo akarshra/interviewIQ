@@ -1,8 +1,7 @@
 import React from 'react'
 import { FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-// eslint-disable-next-line no-unused-vars
-import { motion } from "motion/react"
+import { motion as Motion } from "motion/react"
 import { buildStyles, CircularProgressbar } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
@@ -40,10 +39,10 @@ function Step3Report({ report }) {
   let performanceText = "";
   let shortTagline = "";
 
-  if (finalScore >= 8) {
+  if (finalScore >= 80) {
     performanceText = "Ready for job opportunities.";
     shortTagline = "Excellent clarity and structured responses.";
-  } else if (finalScore >= 5) {
+  } else if (finalScore >= 50) {
     performanceText = "Needs minor improvement before interviews.";
     shortTagline = "Good foundation, refine articulation.";
   } else {
@@ -52,7 +51,7 @@ function Step3Report({ report }) {
   }
 
   const score = finalScore;
-  const percentage = (score / 10) * 100;
+  const percentage = score;
 
 
   const downloadPDF = () => {
@@ -87,7 +86,7 @@ function Step3Report({ report }) {
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
   doc.text(
-    `Final Score: ${finalScore}/10`,
+    `Final Score: ${finalScore}/100`,
     pageWidth / 2,
     currentY + 12,
     { align: "center" }
@@ -110,10 +109,10 @@ function Step3Report({ report }) {
   // ================= ADVICE =================
   let advice = "";
 
-  if (finalScore >= 8) {
+  if (finalScore >= 80) {
     advice =
       "Excellent performance. Maintain confidence and structure. Continue refining clarity and supporting answers with strong real-world examples.";
-  } else if (finalScore >= 5) {
+  } else if (finalScore >= 50) {
     advice =
       "Good foundation shown. Improve clarity and structure. Practice delivering concise, confident answers with stronger supporting examples.";
   } else {
@@ -144,7 +143,7 @@ function Step3Report({ report }) {
   body: questionWiseScore.map((q, i) => [
     `${i + 1}`,
     q.question,
-    `${q.score}/10`,
+    `${q.score}/100`,
     q.feedback,
   ]),
   styles: {
@@ -198,7 +197,7 @@ function Step3Report({ report }) {
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
 
         <div className='space-y-6'>
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="bg-white rounded-2xl sm:rounded-3xl shadow-lg p-6 sm:p-8 text-center">
@@ -209,7 +208,7 @@ function Step3Report({ report }) {
             <div className='relative w-20 h-20 sm:w-25 sm:h-25 mx-auto'>
               <CircularProgressbar
                 value={percentage}
-                text={`${score}/10`}
+                text={`${score}/100`}
                 styles={buildStyles({
                   textSize: "18px",
                   pathColor: "#10b981",
@@ -231,9 +230,9 @@ function Step3Report({ report }) {
                 {shortTagline}
               </p>
             </div>
-          </motion.div>
+          </Motion.div>
 
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className='bg-white rounded-2xl sm:rounded-3xl shadow-lg p-6 sm:p-8'>
@@ -265,14 +264,14 @@ function Step3Report({ report }) {
               }
             </div>
 
-          </motion.div>
+          </Motion.div>
 
 
         </div>
 
         <div className='lg:col-span-2 space-y-6'>
 
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className='bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8'>
@@ -303,9 +302,9 @@ function Step3Report({ report }) {
             </div>
 
 
-          </motion.div>
+          </Motion.div>
 
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className='bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8'>
@@ -349,7 +348,7 @@ function Step3Report({ report }) {
               ))}
             </div>
 
-          </motion.div>
+          </Motion.div>
 
 
 

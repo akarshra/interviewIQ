@@ -22,8 +22,7 @@ function App() {
       try {
         const result = await api.get("/api/user/current-user")
         dispatch(setUserData(result.data))
-      } catch (error) {
-        console.log(error)
+      } catch {
         dispatch(setUserData(null))
       }
     }

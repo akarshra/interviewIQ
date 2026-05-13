@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import { useSelector } from 'react-redux';
-import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
+import { motion as Motion, useScroll, useTransform, AnimatePresence, useMotionValue, useSpring } from "motion/react";
 import { BsCheckCircleFill, BsPlayFill, BsGraphUpArrow, BsMic, BsBarChart, BsRobot, BsLightningChargeFill } from "react-icons/bs";
 import { FiArrowRight, FiCode, FiCpu, FiMessageSquare, FiShield } from "react-icons/fi";
 import { useNavigate } from 'react-router-dom';
@@ -34,6 +34,27 @@ function Home() {
 
   const companies = ["Google", "Meta", "Amazon", "Netflix", "Apple", "Microsoft", "Stripe", "Vercel", "OpenAI"];
 
+  // 3D Interactive Mouse Tracking tracking
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const handleMouseMove = (e) => {
+    const { clientX, clientY } = e;
+    const { innerWidth, innerHeight } = window;
+    mouseX.set((clientX / innerWidth) * 2 - 1);
+    mouseY.set((clientY / innerHeight) * 2 - 1);
+  };
+
+  const smoothMouseX = useSpring(mouseX, { stiffness: 50, damping: 20 });
+  const smoothMouseY = useSpring(mouseY, { stiffness: 50, damping: 20 });
+
+  const floatRotateX = useTransform(smoothMouseY, [-1, 1], [25, -25]);
+  const floatRotateY = useTransform(smoothMouseX, [-1, 1], [-25, 25]);
+  const floatTranslateX = useTransform(smoothMouseX, [-1, 1], [-50, 50]);
+  const floatTranslateY = useTransform(smoothMouseY, [-1, 1], [-50, 50]);
+  const invTranslateX = useTransform(smoothMouseX, [-1, 1], [50, -50]);
+  const invTranslateY = useTransform(smoothMouseY, [-1, 1], [50, -50]);
+
   // Framer Motion Variants
   const staggerContainer = {
     hidden: { opacity: 0 },
@@ -45,21 +66,21 @@ function Home() {
   };
 
   return (
-    <div className='min-h-screen bg-[#070709] text-white font-sans flex flex-col relative selection:bg-indigo-500/30 selection:text-white overflow-x-hidden'>
+    <div onMouseMove={handleMouseMove} className='min-h-screen bg-[#070709] text-white font-sans flex flex-col relative selection:bg-indigo-500/30 selection:text-white overflow-x-hidden'>
       
       {/* Dynamic Ambient Background Elements */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <motion.div 
+        <Motion.div 
           animate={{ x: [0, 100, 0], y: [0, 50, 0] }} 
           transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[120px]" 
         />
-        <motion.div 
+        <Motion.div 
           animate={{ x: [0, -100, 0], y: [0, -50, 0] }} 
           transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 2 }}
           className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-cyan-600/10 blur-[120px]" 
         />
-        <motion.div 
+        <Motion.div 
           animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }} 
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-[40%] left-[40%] w-[800px] h-[400px] rounded-full bg-purple-600/5 blur-[150px]" 
@@ -73,36 +94,53 @@ function Home() {
         <Navbar />
 
         {/* --- SECTION 1: HERO "THE REVEAL" --- */}
-        <section className='pt-32 pb-20 px-6 relative flex flex-col items-center justify-center min-h-[95vh] border-b border-white/5'>
+        <section className='pt-32 pb-20 px-6 relative flex flex-col items-center justify-center min-h-[95vh] border-b border-white/5 perspective-1000'>
           
-          <motion.div 
+          {/* Floating Parallax Geometry Objects */}
+          <Motion.div 
+            style={{ x: floatTranslateX, y: floatTranslateY, rotateX: floatRotateX, rotateY: floatRotateY, rotateZ: useTransform(smoothMouseX, [-1,1], [-10, 10]) }}
+            className="absolute top-[15%] left-[5%] md:left-[10%] w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/10 border border-white/10 backdrop-blur-3xl shadow-[0_0_50px_rgba(99,102,241,0.2)] flex items-center justify-center z-0"
+          >
+             <div className="w-1/2 h-1/2 rounded bg-indigo-400/20 animate-pulse"></div>
+          </Motion.div>
+
+          <Motion.div 
+            style={{ x: invTranslateX, y: invTranslateY, rotateX: floatRotateX, rotateY: floatRotateY, rotateZ: useTransform(smoothMouseX, [-1,1], [15, -15]) }}
+            className="absolute bottom-[25%] right-[5%] md:right-[10%] w-20 h-20 md:w-28 md:h-28 rounded-full bg-gradient-to-tr from-cyan-500/20 to-emerald-500/10 border border-white/10 backdrop-blur-3xl shadow-[0_0_50px_rgba(34,211,238,0.2)] flex items-center justify-center z-0"
+          >
+             <div className="w-1/2 h-1/2 rounded-full border-2 border-cyan-400/30 border-t-cyan-400 animate-spin"></div>
+          </Motion.div>
+
+          {/* Central Hero Body */}
+          <Motion.div 
             variants={staggerContainer}
             initial="hidden"
             animate="show"
+            style={{ rotateX: useTransform(smoothMouseY, [-1,1], [5, -5]), rotateY: useTransform(smoothMouseX, [-1,1], [-5, 5]) }}
             className="flex flex-col items-center text-center max-w-5xl mx-auto z-10"
           >
             {/* Pill Badge */}
-            <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-semibold tracking-wide text-slate-300 mb-8 hover:bg-white/10 hover:border-indigo-500/30 transition-all cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.02)] backdrop-blur-md">
+            <Motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-semibold tracking-wide text-slate-300 mb-8 hover:bg-white/10 hover:border-indigo-500/30 transition-all cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.02)] backdrop-blur-md">
               <span className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
               </span>
               InterviewIQ Engine v2.0 Live
-            </motion.div>
+            </Motion.div>
 
             {/* Massive Headline */}
-            <motion.h1 variants={fadeInUp} className="text-6xl md:text-8xl lg:text-[7rem] font-extrabold tracking-tighter leading-[1.05] mb-8 text-white drop-shadow-2xl">
+            <Motion.h1 variants={fadeInUp} className="text-6xl md:text-8xl lg:text-[7rem] font-extrabold tracking-tighter leading-[1.05] mb-8 text-white drop-shadow-2xl">
               Crack the interview <br className="hidden md:block"/>
               <GradientText>without the pressure.</GradientText>
-            </motion.h1>
+            </Motion.h1>
 
             {/* Subtext */}
-            <motion.p variants={fadeInUp} className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-12 font-medium leading-relaxed">
+            <Motion.p variants={fadeInUp} className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-12 font-medium leading-relaxed">
               Experience ultra-realistic behavioral and technical mock interviews powered by AI. Get forensic, frame-by-frame analytics of your performance to land your dream job faster.
-            </motion.p>
+            </Motion.p>
 
             {/* CTAs */}
-            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
+            <Motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
               <button
                 onClick={() => {
                   if (!userData) { setShowAuth(true); return; }
@@ -123,12 +161,12 @@ function Home() {
               >
                 <BsPlayFill className="text-xl text-indigo-400" /> Watch Demo
               </button>
-            </motion.div>
-          </motion.div>
+            </Motion.div>
+          </Motion.div>
 
           {/* Massive 3D Dashboard Mockup Reveal */}
           <div ref={targetRef} className="w-full max-w-6xl mx-auto mt-24 perspective-1000 z-10 hidden md:block">
-            <motion.div 
+            <Motion.div 
               style={{ 
                 scale: heroImageScale, 
                 rotateX: heroImageRotateX,
@@ -183,13 +221,13 @@ function Home() {
                         <BsLightningChargeFill /> Real-time Analysis
                       </div>
                       <div className="w-3/4 h-2 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: "0%" }} whileInView={{ width: "85%" }} className="h-full bg-cyan-400/80 shadow-[0_0_10px_rgba(34,211,238,0.8)]"></motion.div>
+                        <Motion.div initial={{ width: "0%" }} whileInView={{ width: "85%" }} className="h-full bg-cyan-400/80 shadow-[0_0_10px_rgba(34,211,238,0.8)]"></Motion.div>
                       </div>
                       <div className="w-full h-2 bg-white/10 rounded-full mt-2 overflow-hidden">
-                        <motion.div initial={{ width: "0%" }} whileInView={{ width: "60%" }} className="h-full bg-purple-400/80 shadow-[0_0_10px_rgba(192,132,252,0.8)]"></motion.div>
+                        <Motion.div initial={{ width: "0%" }} whileInView={{ width: "60%" }} className="h-full bg-purple-400/80 shadow-[0_0_10px_rgba(192,132,252,0.8)]"></Motion.div>
                       </div>
                       <div className="w-1/2 h-2 bg-white/10 rounded-full mt-2 overflow-hidden">
-                        <motion.div initial={{ width: "0%" }} whileInView={{ width: "95%" }} className="h-full bg-indigo-400/80 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></motion.div>
+                        <Motion.div initial={{ width: "0%" }} whileInView={{ width: "95%" }} className="h-full bg-indigo-400/80 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></Motion.div>
                       </div>
                     </div>
 
@@ -200,7 +238,7 @@ function Home() {
                     </div>
                  </div>
               </div>
-            </motion.div>
+            </Motion.div>
           </div>
         </section>
 
@@ -211,7 +249,7 @@ function Home() {
            
            <div className="text-sm font-semibold tracking-[0.2em] text-slate-600 uppercase mb-8">Candidates have successfully cleared</div>
            <div className="flex whitespace-nowrap w-full">
-              <motion.div 
+              <Motion.div 
                 animate={{ x: [0, -1500] }}
                 transition={{ repeat: Infinity, ease: "linear", duration: 30 }}
                 className="flex gap-20 items-center px-10"
@@ -221,7 +259,7 @@ function Home() {
                     {company}
                   </span>
                 ))}
-              </motion.div>
+              </Motion.div>
            </div>
         </section>
 
@@ -230,7 +268,7 @@ function Home() {
            
            {/* Feature 1 */}
            <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-24">
-              <motion.div 
+              <Motion.div 
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
@@ -254,9 +292,9 @@ function Home() {
                       </li>
                     ))}
                  </ul>
-              </motion.div>
+              </Motion.div>
 
-              <motion.div 
+              <Motion.div 
                 initial={{ opacity: 0, scale: 0.9, rotateY: 10 }}
                 whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
@@ -267,7 +305,7 @@ function Home() {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] group-hover:bg-indigo-500/20 transition-colors duration-700"></div>
                     
                     {/* Floating Abstract Element */}
-                    <motion.div 
+                    <Motion.div 
                       animate={{ y: [-10, 10, -10] }}
                       transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                       className="w-full bg-[#15151A]/80 backdrop-blur-2xl rounded-2xl border border-white/10 p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10"
@@ -286,14 +324,14 @@ function Home() {
                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> Generating followup...
                         </div>
                       </div>
-                    </motion.div>
+                    </Motion.div>
                  </div>
-              </motion.div>
+              </Motion.div>
            </div>
 
            {/* Feature 2 */}
            <div className="flex flex-col md:flex-row-reverse items-center gap-12 lg:gap-24">
-              <motion.div 
+              <Motion.div 
                 initial={{ opacity: 0, x: 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
@@ -310,9 +348,9 @@ function Home() {
                  <button onClick={() => navigate('/history')} className="text-white hover:text-cyan-400 font-bold flex items-center gap-2 transition-colors text-lg group">
                    View sample PDF report <FiArrowRight className="group-hover:translate-x-2 transition-transform" />
                  </button>
-              </motion.div>
+              </Motion.div>
 
-              <motion.div 
+              <Motion.div 
                 initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
                 whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
@@ -325,17 +363,17 @@ function Home() {
                      <div className="w-full h-full relative z-10 flex flex-col gap-6 justify-center">
                         <div className="flex gap-3 w-full h-40 items-end px-4">
                            {[40, 60, 45, 80, 55, 100, 75].map((h, i) => (
-                              <motion.div 
+                              <Motion.div 
                                 key={i} 
                                 initial={{ height: 0 }}
                                 whileInView={{ height: `${h}%` }}
                                 viewport={{ once: true }}
                                 transition={{ duration: 1, delay: i * 0.1, type: "spring" }}
                                 className={`flex-1 rounded-t-lg shadow-[0_0_15px_rgba(6,182,212,0.3)] ${h === 100 ? "bg-gradient-to-t from-cyan-600/20 to-cyan-400" : "bg-gradient-to-t from-white/5 to-white/20"}`}
-                              ></motion.div>
+                              ></Motion.div>
                            ))}
                         </div>
-                        <motion.div 
+                        <Motion.div 
                           whileHover={{ scale: 1.05 }}
                           className="bg-[#15151A]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex justify-between items-center shadow-2xl mx-4 cursor-pointer"
                         >
@@ -346,10 +384,10 @@ function Home() {
                            <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
                              <BsGraphUpArrow className="text-cyan-400 text-xl" />
                            </div>
-                        </motion.div>
+                        </Motion.div>
                      </div>
                  </div>
-              </motion.div>
+              </Motion.div>
            </div>
         </section>
 
@@ -369,7 +407,7 @@ function Home() {
                    { title: "Enter the Simulator", desc: "Turn on your camera and microphone. The AI engine will initiate a dynamic, context-aware 45-minute strict interview loop.", icon: <BsMic /> },
                    { title: "Review The Tape", desc: "Get a forensic breakdown of your performance. Identify filler words, weak architectures, and bad pacing with our PDF exports.", icon: <BsBarChart /> }
                  ].map((step, index) => (
-                    <motion.div 
+                    <Motion.div 
                       key={index}
                       initial={{ opacity: 0, x: -50 }}
                       whileInView={{ opacity: 1, x: 0 }}
@@ -388,7 +426,7 @@ function Home() {
                          <h3 className="text-3xl font-bold text-white mb-4">{step.title}</h3>
                          <p className="text-lg text-slate-400 leading-relaxed font-medium">{step.desc}</p>
                        </div>
-                    </motion.div>
+                    </Motion.div>
                  ))}
               </div>
            </div>
@@ -399,7 +437,7 @@ function Home() {
            {/* Crazy Background Glows for CTA */}
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-indigo-500/20 to-fuchsia-500/20 blur-[150px] rounded-full pointer-events-none z-0"></div>
 
-           <motion.div 
+           <Motion.div 
              initial={{ opacity: 0, scale: 0.95, y: 40 }}
              whileInView={{ opacity: 1, scale: 1, y: 0 }}
              viewport={{ once: true }}
@@ -428,7 +466,7 @@ function Home() {
                    </span>
                 </button>
               </div>
-           </motion.div>
+           </Motion.div>
         </section>
 
         {showAuth && <AuthModel onClose={() => setShowAuth(false)} />}

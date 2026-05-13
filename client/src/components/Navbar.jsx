@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { motion } from "motion/react"
+import { motion as Motion } from "motion/react"
 import { BsRobot, BsCoin } from "react-icons/bs";
 import { HiOutlineLogout } from "react-icons/hi";
 import { FaUserAstronaut } from "react-icons/fa";
@@ -25,15 +25,15 @@ function Navbar() {
             setShowUserPopup(false)
             navigate("/")
 
-        } catch (error) {
-            console.log(error)
+        } catch {
+            // Handle error silently
         }
     }
 
   return (
     <div className='w-full flex justify-center px-6 pt-6 fixed top-0 left-0 right-0 z-50 pointer-events-none'>
         {/* Pointer events bound to children to allow clicking through the invisible fixed full-width wrapper */}
-        <motion.div 
+        <Motion.div 
         initial={{opacity:0 , y:-40}}
         animate={{opacity:1 , y:0}}
         transition={{duration: 0.5, type: "spring", stiffness: 100}}
@@ -120,7 +120,7 @@ function Navbar() {
                     </button>
                 )}
             </div>
-        </motion.div>
+        </Motion.div>
 
         {showAuth && <div className="pointer-events-auto"><AuthModel onClose={()=>setShowAuth(false)}/></div>}
       

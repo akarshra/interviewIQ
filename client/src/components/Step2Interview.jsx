@@ -1,11 +1,27 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import maleVideo from "../assets/videos/male-ai.mp4";
 import femaleVideo from "../assets/videos/female-ai.mp4";
-import { motion, AnimatePresence } from "motion/react";
+import { motion as Motion, AnimatePresence } from "motion/react";
 import { BsArrowRight, BsLightningCharge, BsSoundwave } from 'react-icons/bs';
 import { FiMic, FiMicOff, FiCode, FiMessageSquare, FiInfo, FiActivity, FiUser } from 'react-icons/fi';
 import { api } from '../utils/apiClient';
 import Editor from '@monaco-editor/react';
+
+const editorStarterCode = {
+  javascript: `// Write your JavaScript solution here\nfunction solution() {\n  \n}`,
+  python: `# Write your Python solution here\ndef solution():\n    pass`,
+  java: `// Write your Java solution here\npublic class Solution {\n    public static void main(String[] args) {\n        System.out.println("Hello, InterviewIQ");\n    }\n}`,
+  cpp: `// Write your C++ solution here\n#include <iostream>\nusing namespace std;\nint main() {\n    cout << "Hello, InterviewIQ";\n    return 0;\n}`,
+  c: `// Write your C solution here\n#include <stdio.h>\nint main() {\n    printf("Hello, InterviewIQ");\n    return 0;\n}`
+};
+
+const executionConfig = {
+  javascript: { language: 'javascript', version: '18.15.0', file: 'solution.js' },
+  python: { language: 'python', version: '3.11.5', file: 'solution.py' },
+  java: { language: 'java', version: '17.0.5', file: 'Solution.java' },
+  cpp: { language: 'cpp', version: 'g++ 12.2.0', file: 'solution.cpp' },
+  c: { language: 'c', version: 'gcc 12.2.0', file: 'solution.c' }
+};
 
 function Step2Interview({ interviewData, onFinish }) {
   const { interviewId, questions, userName } = interviewData;
@@ -28,11 +44,62 @@ function Step2Interview({ interviewData, onFinish }) {
   
   // Monaco Code Editor V2 Feature State
   const [showEditor, setShowEditor] = useState(false);
-  const [codeValue, setCodeValue] = useState("// Discuss and implement your solution here\n\nfunction solution() {\n  \n}");
+  const [codeLanguage, setCodeLanguage] = useState(interviewData?.preferredLanguage || "javascript");
+  const [codeValue, setCodeValue] = useState(editorStarterCode[interviewData?.preferredLanguage] || editorStarterCode.javascript);
+  const [consoleOutput, setConsoleOutput] = useState("");
+  const [isRunningCode, setIsRunningCode] = useState(false);
+
+  const runCode = async () => {
+    if (isRunningCode) return;
+    setIsRunningCode(true);
+    setConsoleOutput("Execution started...");
+
+    const config = executionConfig[codeLanguage] || executionConfig.javascript;
+    const payload = {
+      language: config.language,
+      version: config.version,
+      files: [{ name: config.file, content: codeValue }]
+    };
+
+    try {
+      const response = await fetch("https://emkc.org/api/v2/piston/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.run?.output) {
+        setConsoleOutput(data.run.output);
+      } else if (data.run?.stderr) {
+        setConsoleOutput(data.run.stderr);
+      } else if (data.message) {
+        setConsoleOutput(data.message);
+      } else {
+        setConsoleOutput("Execution finished with no output.");
+      }
+    } catch (error) {
+      console.error("Code execution failed:", error);
+      setConsoleOutput("Failed to connect to execution engine.");
+    } finally {
+      setIsRunningCode(false);
+    }
+  };
 
   const autoSubmittedRef = useRef(false);
   const isSubmittingRef = useRef(false);
   const feedbackRef = useRef("");
+
+  const submitAnswerRef = useRef(null);
+  const hasSpokenIntroRef = useRef(false);
+  const spokenQuestionIndexRef = useRef(-1);
+
+  useEffect(() => {
+    setCodeValue(editorStarterCode[codeLanguage] || editorStarterCode.javascript);
+  }, [codeLanguage]);
+
+  useEffect(() => {
+    submitAnswerRef.current = submitAnswer;
+  });
 
   useEffect(() => {
     isSubmittingRef.current = isSubmitting;
@@ -46,7 +113,7 @@ function Step2Interview({ interviewData, onFinish }) {
 
   const currentQuestion = questions[currentIndex];
 
-  function startMic() {
+  const startMic = useCallback(() => {
     if (recognitionRef.current && !isAIPlaying) {
       try {
         recognitionRef.current.start();
@@ -54,13 +121,13 @@ function Step2Interview({ interviewData, onFinish }) {
         console.debug(e);
       }
     }
-  }
+  }, [isAIPlaying]);
 
-  function stopMic() {
+  const stopMic = useCallback(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
-  }
+  }, []);
 
   useEffect(() => {
     const loadVoices = () => {
@@ -101,7 +168,7 @@ function Step2Interview({ interviewData, onFinish }) {
 
   const videoSource = voiceGender === "male" ? maleVideo : femaleVideo;
 
-  const speakText = (text) => {
+  const speakText = useCallback((text) => {
     return new Promise((resolve) => {
       if (!window.speechSynthesis || !selectedVoice) {
         resolve();
@@ -140,16 +207,21 @@ function Step2Interview({ interviewData, onFinish }) {
       setSubtitle(text);
       window.speechSynthesis.speak(utterance);
     });
-  };
+  }, [isMicOn, selectedVoice, startMic, stopMic]);
 
   useEffect(() => {
     if (!selectedVoice) return;
     const runIntro = async () => {
       if (isIntroPhase) {
+        if (hasSpokenIntroRef.current) return;
+        hasSpokenIntroRef.current = true;
         await speakText(`Hi ${userName}, it's great to meet you today. I hope you're feeling confident and ready.`);
         await speakText("I'll ask you a few questions. Just answer naturally, and take your time. Let's begin.");
         setIsIntroPhase(false);
       } else if (currentQuestion) {
+        if (spokenQuestionIndexRef.current === currentIndex) return;
+        spokenQuestionIndexRef.current = currentIndex;
+        
         await new Promise(r => setTimeout(r, 800));
         if (currentIndex === questions.length - 1) {
           await speakText("Alright, this one might be a bit more challenging.");
@@ -161,7 +233,7 @@ function Step2Interview({ interviewData, onFinish }) {
       }
     };
     runIntro();
-  }, [selectedVoice, isIntroPhase, currentIndex]);
+  }, [selectedVoice, isIntroPhase, currentIndex, currentQuestion, isMicOn, speakText, startMic, userName, questions.length]);
 
   async function submitAnswer() {
     if (isSubmitting) return;
@@ -170,8 +242,9 @@ function Step2Interview({ interviewData, onFinish }) {
 
     try {
       // V2: Append Monaco Code to the Answer implicitly so the AI grades it!
+      const runLog = consoleOutput ? `\n# Compiler Output:\n${consoleOutput}\n` : "";
       const payloadAnswer = showEditor 
-        ? `# Candidate Code Implementation:\n\`\`\`javascript\n${codeValue}\n\`\`\`\n\n# Candidate Verbal Explanation:\n${answer || "(No verbal explanation provided)"}` 
+        ? `# Candidate Code Implementation:\n\`\`\`${codeLanguage}\n${codeValue}\n\`\`\`\n${runLog}\n# Candidate Verbal Explanation:\n${answer || "(No verbal explanation provided)"}` 
         : answer;
 
       const result = await api.post("/api/interview/submit-answer", {
@@ -184,8 +257,8 @@ function Step2Interview({ interviewData, onFinish }) {
       setFeedback(result.data.feedback);
       speakText(result.data.feedback);
       setIsSubmitting(false);
-    } catch (error) {
-      console.log(error);
+    } catch {
+      // Handle error silently
       setIsSubmitting(false);
     }
   }
@@ -200,7 +273,7 @@ function Step2Interview({ interviewData, onFinish }) {
           clearInterval(timer);
           if (!autoSubmittedRef.current && !isSubmittingRef.current && !feedbackRef.current) {
             autoSubmittedRef.current = true;
-            submitAnswer();
+            submitAnswerRef.current();
           }
           return 0;
         }
@@ -209,7 +282,7 @@ function Step2Interview({ interviewData, onFinish }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isIntroPhase, currentIndex]);
+  }, [isIntroPhase, currentIndex, currentQuestion, questions.length]);
 
   useEffect(() => {
     if (!("webkitSpeechRecognition" in window)) return;
@@ -239,7 +312,7 @@ function Step2Interview({ interviewData, onFinish }) {
   const handleNext = async () => {
     setAnswer("");
     setFeedback("");
-    setCodeValue("// Discuss and implement your solution here\n\nfunction solution() {\n  \n}");
+    setCodeValue(editorStarterCode[codeLanguage] || editorStarterCode.javascript);
     autoSubmittedRef.current = false;
 
     if (currentIndex + 1 >= questions.length) {
@@ -262,10 +335,9 @@ function Step2Interview({ interviewData, onFinish }) {
     setIsMicOn(false);
     try {
       const result = await api.post("/api/interview/finish", { interviewId });
-      console.log(result.data);
       onFinish(result.data);
-    } catch (error) {
-      console.log(error);
+    } catch {
+      // Handle error silently
     }
   };
 
@@ -343,7 +415,7 @@ function Step2Interview({ interviewData, onFinish }) {
         {/* === GRID ITEM 0: CODE EDITOR (V2 FEATURE) === */}
         <AnimatePresence>
           {showEditor && (
-             <motion.div 
+             <Motion.div 
                initial={{ opacity: 0, x: -50, scale: 0.95 }}
                animate={{ opacity: 1, x: 0, scale: 1 }}
                exit={{ opacity: 0, x: -50, scale: 0.95, width: 0 }}
@@ -357,34 +429,52 @@ function Step2Interview({ interviewData, onFinish }) {
                        <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                        <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                      </div>
-                     <div className="text-xs font-mono text-slate-400 tracking-wider">solution.js</div>
+                     <div className="text-xs font-mono text-slate-400 tracking-wider lowercase">{codeLanguage}.{codeLanguage === 'cpp' ? 'cpp' : codeLanguage === 'c' ? 'c' : codeLanguage === 'java' ? 'java' : 'js'}</div>
                    </div>
-                   <div className="text-[10px] uppercase font-bold tracking-widest text-[#6366F1] flex items-center gap-2">
-                     <span className="relative flex h-2 w-2">
-                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6366F1] opacity-75"></span>
-                       <span className="relative inline-flex rounded-full h-2 w-2 bg-[#6366F1]"></span>
-                     </span>
-                     Synched to AI
+                   <div className="flex items-center gap-2">
+                     <div className="relative">
+                        <select
+                          value={codeLanguage}
+                          onChange={(e) => setCodeLanguage(e.target.value)}
+                          className="text-[10px] font-semibold uppercase tracking-widest text-slate-200 bg-[#0F172A] border border-[#6366F1]/20 rounded-full px-3 py-1 outline-none"
+                        >
+                          <option value="javascript">JavaScript</option>
+                          <option value="python">Python</option>
+                          <option value="java">Java</option>
+                          <option value="cpp">C++</option>
+                          <option value="c">C</option>
+                        </select>
+                     </div>
+                     <button onClick={runCode} disabled={isRunningCode} className="px-3 py-1 bg-[#6366F1]/20 hover:bg-[#6366F1]/40 border border-[#6366F1]/30 rounded text-white flex items-center gap-2 transition-colors disabled:opacity-50">
+                        {isRunningCode ? "Running..." : "Run Code"}
+                     </button>
                    </div>
                 </div>
-                <div className="flex-1 w-full relative pt-4 bg-[#0A0A0C]">
-                   <Editor
-                     height="100%"
-                     defaultLanguage="javascript"
-                     theme="vs-dark"
-                     value={codeValue}
-                     onChange={(val) => setCodeValue(val)}
-                     options={{
-                       minimap: { enabled: false },
-                       fontSize: 14,
-                       padding: { top: 8 },
-                       fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
-                       scrollBeyondLastLine: false,
-                       lineHeight: 24,
-                     }}
-                   />
+                <div className="flex-1 w-full relative pt-4 bg-[#0A0A0C] flex flex-col">
+                   <div className="flex-[3] relative">
+                     <Editor
+                       height="100%"
+                       defaultLanguage={codeLanguage}
+                       language={codeLanguage}
+                       theme="vs-dark"
+                       value={codeValue}
+                       onChange={(val) => setCodeValue(val)}
+                       options={{
+                         minimap: { enabled: false },
+                         fontSize: 14,
+                         padding: { top: 8 },
+                         fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
+                         scrollBeyondLastLine: false,
+                         lineHeight: 24,
+                       }}
+                     />
+                   </div>
+                   <div className="flex-1 min-h-[150px] bg-black border-t border-white/10 p-3 overflow-y-auto">
+                      <div className="text-[10px] text-slate-500 font-mono mb-2 uppercase tracking-widest">Terminal Output</div>
+                      <pre className="text-xs text-[#10B981] font-mono whitespace-pre-wrap">{consoleOutput}</pre>
+                   </div>
                 </div>
-             </motion.div>
+             </Motion.div>
           )}
         </AnimatePresence>
 
@@ -426,7 +516,7 @@ function Step2Interview({ interviewData, onFinish }) {
 
             {/* AI Feedback View */}
             {feedback && (
-               <motion.div 
+               <Motion.div 
                  initial={{ opacity: 0, y: 10 }}
                  animate={{ opacity: 1, y: 0 }}
                  className='mt-2 bg-[#10B981]/10 border border-[#10B981]/30 p-4 rounded-xl shadow-sm backdrop-blur-md mb-4'>
@@ -440,27 +530,27 @@ function Step2Interview({ interviewData, onFinish }) {
                   className='mt-4 w-full bg-gradient-to-r from-[#10B981] to-emerald-500 text-black py-2.5 rounded-lg shadow-md hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all font-bold flex items-center justify-center gap-2 text-sm'>
                   Next Question <BsArrowRight size={16}/>
                  </button>
-               </motion.div>
+               </Motion.div>
             )}
 
             {!feedback && (
               <div className='flex items-center gap-3 mt-auto pt-2'>
-                <motion.button
+                <Motion.button
                   onClick={toggleMic}
                   disabled={isSubmitting || isAIPlaying}
                   whileTap={{ scale: 0.9 }}
                   className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl shadow-lg transition duration-300 ${isMicOn ? 'bg-black border border-[#6366F1]/30 hover:bg-white/10 text-[#6366F1]' : 'bg-red-500/20 text-red-500 border border-red-500/30'}`}>
                   {isMicOn ? <FiMic size={20} /> : <FiMicOff size={20}/>}
-                </motion.button>
+                </Motion.button>
     
-                <motion.button
+                <Motion.button
                   onClick={submitAnswer}
                   disabled={isSubmitting || isIntroPhase || isAIPlaying}
                   whileTap={{ scale: 0.95 }}
                   className='flex-1 bg-gradient-to-r from-[#6366F1] to-[#4F46E5] text-white py-3.5 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.4)] transition-all font-bold text-sm tracking-wide disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden'>
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
                   {isSubmitting ? "Submitting to AI..." : "Commit Answer"}
-                </motion.button>
+                </Motion.button>
               </div>
             )}
           </div>

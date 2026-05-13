@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { FaCheckCircle } from 'react-icons/fa';
-import { motion } from 'motion/react';
+import { motion as Motion } from 'motion/react';
 import { api } from '../utils/apiClient';
 import { useDispatch } from 'react-redux';
 import { setUserData } from '../redux/userSlice';
@@ -26,19 +26,19 @@ function Success() {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center p-6'>
-      <motion.div 
+      <Motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className='bg-white p-10 rounded-3xl shadow-2xl border border-emerald-100 max-w-md w-full text-center'
       >
-        <motion.div
+        <Motion.div
            initial={{ scale: 0 }}
            animate={{ scale: 1 }}
            transition={{ delay: 0.2, type: "spring" }}
            className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6"
         >
           <FaCheckCircle className="text-emerald-500 text-4xl" />
-        </motion.div>
+        </Motion.div>
         
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Payment Successful!</h1>
         <p className="text-gray-500 mb-8 leading-relaxed">
@@ -51,7 +51,7 @@ function Success() {
         >
           Return Home
         </button>
-      </motion.div>
+      </Motion.div>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FaArrowLeft, FaHistory, FaRegCalendarAlt } from 'react-icons/fa'
 import { BsArrowRight, BsRobot } from 'react-icons/bs'
-import { motion } from "motion/react"
+import { motion as Motion } from "motion/react"
 import { api } from '../utils/apiClient'
 
 function InterviewHistory() {
@@ -72,7 +72,7 @@ function InterviewHistory() {
                         <p className="mt-4 text-slate-400 font-medium">Loading history...</p>
                     </div>
                 ) : interviews.length === 0 ? (
-                    <motion.div 
+                    <Motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className='bg-[#15151A]/80 backdrop-blur-xl border border-white/10 p-12 rounded-[2rem] shadow-2xl text-center max-w-2xl mx-auto mt-16 flex flex-col items-center'
@@ -90,9 +90,9 @@ function InterviewHistory() {
                         >
                             Start an Interview <BsArrowRight />
                         </button>
-                    </motion.div>
+                    </Motion.div>
                 ) : (
-                    <motion.div 
+                    <Motion.div 
                         variants={containerVariants}
                         initial="hidden"
                         animate="show"
@@ -101,7 +101,7 @@ function InterviewHistory() {
                         {interviews.map((item, index) => {
                             const isCompleted = item.status === "completed";
                             return (
-                                <motion.div 
+                                <Motion.div 
                                     variants={itemVariants}
                                     key={index}
                                     onClick={() => navigate(`/report/${item._id}`)}
@@ -137,7 +137,7 @@ function InterviewHistory() {
                                         {/* SCORE */}
                                         <div className="text-right flex flex-col items-end">
                                             <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400">
-                                                {item.finalScore || 0}<span className="text-xl text-slate-500">/10</span>
+                                                {item.finalScore || 0}<span className="text-xl text-slate-500">/100</span>
                                             </div>
                                             <p className="text-[11px] text-slate-400 uppercase tracking-widest font-bold mt-1">
                                                 Overall Score
@@ -148,10 +148,10 @@ function InterviewHistory() {
                                             <BsArrowRight />
                                         </div>
                                     </div>
-                                </motion.div>
+                                </Motion.div>
                             )
                         })}
-                    </motion.div>
+                    </Motion.div>
                 )}
             </div>
         </div>

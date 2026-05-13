@@ -8,8 +8,11 @@ const questionsSchema = new mongoose.Schema({
   feedback: String,
   score: { type: Number, default: 0 },
   confidence: { type: Number, default: 0 },
-communication: { type: Number, default: 0 },
-correctness: { type: Number, default: 0 },
+  communication: { type: Number, default: 0 },
+  correctness: { type: Number, default: 0 },
+  technical: { type: Number, default: 0 },
+  problemSolving: { type: Number, default: 0 },
+  analyticalLogic: { type: Number, default: 0 }
 })
 
 
@@ -29,11 +32,35 @@ const interviewSchema = new mongoose.Schema({
     },
     mode:{
         type:String,
-        enum:["HR" ,"Technical"],
+        enum:["Behavioral","Technical"],
         required:true
+    },
+    difficulty: {
+        type: String,
+        enum: ["Beginner", "Intermediate", "Expert"],
+        default: "Intermediate"
+    },
+    practiceMode: {
+        type: Boolean,
+        default: false
+    },
+    preferredLanguage: {
+        type: String,
+        default: "javascript"
+    },
+    template: {
+        type: String,
+        default: "General"
+    },
+    jobDescription:{
+        type:String
     },
     resumeText:{
      type:String
+    },
+    personality: {
+        type: String,
+        default: "Professional and Balanced"
     },
     questions:[questionsSchema],
 

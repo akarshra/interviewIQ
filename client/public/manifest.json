@@ -1,0 +1,16 @@
+{
+  "name": "InterviewIQ.AI",
+  "short_name": "InterviewIQ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "description": "AI-powered interview coaching and assessment.",
+  "icons": [
+    {
+      "src": "/img1.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}

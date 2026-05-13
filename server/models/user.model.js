@@ -35,6 +35,10 @@ const userSchema = new mongoose.Schema({
     lastInterviewDate: {
         type: Date,
         default: null
+    },
+    badges: {
+        type: [String],
+        default: []
     }
 
 }, {timestamps:true})

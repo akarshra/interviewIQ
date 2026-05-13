@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from "motion/react";
+import { motion as Motion } from "motion/react";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
@@ -7,16 +7,18 @@ import {
 } from 'recharts';
 import { api } from '../utils/apiClient';
 import { FaChartLine, FaBrain, FaRegChartBar } from 'react-icons/fa';
-import { BsLightningChargeFill } from 'react-icons/bs';
+import { BsLightningChargeFill, BsFillTrophyFill } from 'react-icons/bs';
+import { useSelector } from 'react-redux';
 
 function Analytics() {
+    const { userData } = useSelector((state) => state.user);
     const [interviews, setInterviews] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchInterviews = async () => {
             try {
-                const result = await api.get("/api/interview/my-interviews");
+                const result = await api.get("/api/interview/get-interview");
                 // Sort by date ascending to show realistic timeline progression
                 const sorted = result.data.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
                 setInterviews(sorted);
@@ -34,23 +36,39 @@ function Analytics() {
         index: i + 1,
         date: new Date(int.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         role: int.role,
-        score: int.report?.finalScore || 0,
+        score: Number(int.finalScore || 0),
         questionsCount: int.questions?.length || 0
-    })).filter(d => d.score > 0);
+    })).filter(d => d.score >= 0);
 
-    // 2. Prepare Aggregated Radial Data for Multidimensional Traits  
-    // We average theoretical "traits" across the user's latest interviews to build the bento RadarChart
-    // Since true multi-trait metrics aren't perfectly structured yet, we derive logical metrics from score ranges
     const avgScore = timelineData.reduce((acc, curr) => acc + curr.score, 0) / (timelineData.length || 1);
     
-    // Simulate robust metrics strictly derived organically from their scoring patterns
+    // Calculate authentic metrics across all questions in recorded interviews
+    let totalQuestionsGraded = 0;
+    let sumTech = 0; let sumComm = 0; let sumProb = 0; let sumConf = 0; let sumLogic = 0; let sumCorrectness = 0;
+
+    interviews.forEach(int => {
+       if (int.questions && int.questions.length > 0) {
+           int.questions.forEach(q => {
+               totalQuestionsGraded++;
+               sumTech += q.technical || 0;
+               sumComm += q.communication || 0;
+               sumProb += q.problemSolving || 0;
+               sumConf += q.confidence || 0;
+               sumLogic += q.analyticalLogic || 0;
+               sumCorrectness += q.correctness || 0;
+           });
+       }
+    });
+
+    const divisor = totalQuestionsGraded || 1;
+    // Map strictly to an authentic 100-point scale for the Radar Matrix
     const radarData = [
-        { subject: 'Technical Core', A: Math.min(100, avgScore + 5), fullMark: 100 },
-        { subject: 'Communication', A: Math.min(100, avgScore + 10), fullMark: 100 },
-        { subject: 'Problem Solving', A: Math.min(100, Math.max(0, avgScore - 5)), fullMark: 100 },
-        { subject: 'Confidence', A: Math.min(100, avgScore + 8), fullMark: 100 },
-        { subject: 'Analytical Logic', A: Math.min(100, avgScore), fullMark: 100 },
-        { subject: 'Experience Match', A: Math.max(20, Math.min(100, avgScore - 10)), fullMark: 100 },
+        { subject: 'Technical Core', A: Math.round((sumTech / divisor) * 10), fullMark: 100 },
+        { subject: 'Communication', A: Math.round((sumComm / divisor) * 10), fullMark: 100 },
+        { subject: 'Problem Solving', A: Math.round((sumProb / divisor) * 10), fullMark: 100 },
+        { subject: 'Confidence', A: Math.round((sumConf / divisor) * 10), fullMark: 100 },
+        { subject: 'Analytical Logic', A: Math.round((sumLogic / divisor) * 10), fullMark: 100 },
+        { subject: 'Correctness', A: Math.round((sumCorrectness / divisor) * 10), fullMark: 100 },
     ];
 
     if (loading) {
@@ -86,7 +104,7 @@ function Analytics() {
             <div className="max-w-7xl mx-auto relative z-10 w-full h-full">
 
                 {/* Dashboard Header */}
-                <motion.div 
+                <Motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6"
@@ -114,13 +132,13 @@ function Analytics() {
                            </p>
                         </div>
                     </div>
-                </motion.div>
+                </Motion.div>
 
                 {/* Grid Layout Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                     {/* Chart 1: Temporal Progression (AreaChart) */}
-                    <motion.div 
+                    <Motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.1 }}
@@ -176,10 +194,10 @@ function Analytics() {
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
-                    </motion.div>
+                    </Motion.div>
 
                     {/* Chart 2: Multidimensional Radar */}
-                    <motion.div 
+                    <Motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.2 }}
@@ -204,9 +222,37 @@ function Analytics() {
                                 </RadarChart>
                             </ResponsiveContainer>
                         </div>
-                    </motion.div>
+                    </Motion.div>
 
                 </div>
+
+                {/* Grid Row 2: Badges / Achievements */}
+                <Motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="mt-6 w-full bg-[#15151A]/80 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 md:p-8 shadow-2xl relative overflow-hidden"
+                >
+                    <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+                        <BsFillTrophyFill className="text-2xl text-yellow-500" />
+                        <h3 className="text-2xl font-bold text-white">Unlocked Achievements & Badges</h3>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {["First Interview", "Elite Scorer", "3-Day Streak", "7-Day Streak"].map(badge => {
+                            const isUnlocked = userData?.badges?.includes(badge);
+                            return (
+                                <div key={badge} className={`p-4 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all ${isUnlocked ? "bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.2)] grayscale-0 opacity-100" : "bg-black/40 border-white/5 grayscale opacity-40"}`}>
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-inner ${isUnlocked ? "bg-yellow-500/20 text-yellow-400" : "bg-white/5 text-slate-500"}`}>
+                                        <BsFillTrophyFill />
+                                    </div>
+                                    <span className={`text-sm font-bold ${isUnlocked ? "text-yellow-400" : "text-slate-500"}`}>{badge}</span>
+                                    <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{isUnlocked ? "Unlocked" : "Locked"}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Motion.div>
             </div>
         </div>
     );

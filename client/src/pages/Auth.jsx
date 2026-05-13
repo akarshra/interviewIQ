@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { BsRobot } from "react-icons/bs";
 import { IoSparkles } from "react-icons/io5";
-import { motion, AnimatePresence } from "motion/react"
+import { motion as Motion, AnimatePresence } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
 import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
@@ -23,16 +23,25 @@ function Auth({isModel = false}) {
     };
 
     const handleGoogleAuth = async () => {
+        setError(null);
         try {
             const response = await signInWithPopup(auth,provider)
             let User = response.user
-            let name = User.displayName
+            let name = User.displayName || User.email.split("@")[0]
             let email = User.email
-            const result = await api.post("/api/auth/google", { name, email })
+            let googleId = User.uid
+            const result = await api.post("/api/auth/google", { name, email, googleId })
             dispatch(setUserData(result.data))
             if(!isModel) navigate("/")
         } catch (error) {
-            console.log(error)
+            // Handle popup blocked errors more gracefully
+            if (error.code === "auth/popup-blocked") {
+                setError("Popup was blocked by your browser. Please allow popups for this site and try again, or use email authentication instead.");
+            } else if (error.code === "auth/cancelled-popup-request") {
+                setError("Sign-in was cancelled. Please try again.");
+            } else {
+                setError(error.message || "Google authentication failed or was cancelled.");
+            }
             dispatch(setUserData(null))
         }
     }
@@ -52,8 +61,7 @@ function Auth({isModel = false}) {
             dispatch(setUserData(result.data));
             if(!isModel) navigate("/")
         } catch (error) {
-            console.error(error);
-            setError(error.response?.data?.message || "An error occurred during authentication.");
+            setError(error.response?.data?.message || "Something went wrong")
         } finally {
             setLoading(false);
         }
@@ -64,12 +72,12 @@ function Auth({isModel = false}) {
       w-full 
       ${isModel ? "py-2 flex justify-center" : "min-h-screen bg-[#f3f3f3] flex items-center justify-center px-6 py-20"}
     `}>
-        <motion.div 
+        <Motion.div 
         initial={{opacity:0 , y:-40}} 
         animate={{opacity:1 , y:0}} 
         transition={{duration:0.6}}
         className={`
-        w-full overflow-hidden
+        w-full overflow-hidden text-gray-900
         ${isModel ? "max-w-sm p-6 rounded-2xl" : "max-w-lg p-10 md:p-12 rounded-[32px]"}
         bg-white shadow-2xl border border-gray-200
       `}>
@@ -80,7 +88,7 @@ function Auth({isModel = false}) {
                 <h2 className='font-semibold text-lg'>InterviewIQ.AI</h2>
             </div>
 
-            <h1 className={`${isModel ? "text-xl" : "text-2xl md:text-3xl"} font-semibold text-center leading-snug mb-2`}>
+            <h1 className={`${isModel ? "text-xl" : "text-2xl md:text-3xl"} font-semibold text-gray-900 text-center leading-snug mb-2`}>
                 {isLogin ? "Welcome back to" : "Join"} <br/>
                 <span className={`bg-green-100 mt-2 text-green-600 px-3 py-1 rounded-full inline-flex items-center gap-2 ${isModel ? "text-sm" : ""}`}>
                     <IoSparkles size={16}/>
@@ -103,7 +111,7 @@ function Auth({isModel = false}) {
             <form onSubmit={handleEmailAuth} className={`space-y-4 ${isModel ? "mb-4" : "mb-6"}`}>
                 <AnimatePresence>
                     {!isLogin && (
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
@@ -119,7 +127,7 @@ function Auth({isModel = false}) {
                                 className={`w-full ${isModel ? "px-3 py-2 text-sm" : "px-4 py-3"} rounded-xl border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all`}
                                 required={!isLogin}
                             />
-                        </motion.div>
+                        </Motion.div>
                     )}
                 </AnimatePresence>
 
@@ -149,7 +157,7 @@ function Auth({isModel = false}) {
                     />
                 </div>
 
-                <motion.button 
+                <Motion.button 
                     type="submit"
                     disabled={loading}
                     whileHover={{opacity:0.9 , scale:1.02}}
@@ -161,7 +169,7 @@ function Auth({isModel = false}) {
                     ) : (
                         isLogin ? 'Sign In' : 'Create Account'
                     )}
-                </motion.button>
+                </Motion.button>
             </form>
 
             <div className={`relative flex items-center ${isModel ? "mb-4 py-1" : "mb-6 py-2"}`}>
@@ -170,15 +178,13 @@ function Auth({isModel = false}) {
                 <div className="flex-grow border-t border-gray-200"></div>
             </div>
 
-            <motion.button 
-            type="button"
-            onClick={handleGoogleAuth}
-            whileHover={{backgroundColor: '#f9fafb'}}
-            whileTap={{scale:0.98}}
-            className={`w-full flex items-center justify-center gap-3 border border-gray-300 text-gray-700 rounded-xl shadow-sm hover:shadow transition-all bg-white font-medium ${isModel ? "py-2.5 text-sm h-[40px]" : "py-3 h-[52px]"}`}>
+            <button 
+                type="button"
+                onClick={handleGoogleAuth}
+                className={`w-full flex items-center justify-center gap-3 border border-gray-300 text-gray-700 rounded-xl shadow-sm hover:shadow transition-all bg-white font-medium hover:bg-gray-50 active:scale-95 ${isModel ? "py-2.5 text-sm h-[40px]" : "py-3 h-[52px]"}`}>
                 <FcGoogle size={isModel ? 18 : 22}/>
                 Google
-            </motion.button>
+            </button>
 
             <div className="mt-8 text-center text-sm text-gray-600">
                 {isLogin ? "Don't have an account? " : "Already have an account? "}
@@ -193,7 +199,7 @@ function Auth({isModel = false}) {
                     {isLogin ? 'Sign up' : 'Log in'}
                 </button>
             </div>
-        </motion.div>
+        </Motion.div>
     </div>
   )
 }

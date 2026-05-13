@@ -15,6 +15,7 @@ interviewRouter.post("/submit-answer",isAuth,submitAnswer)
 interviewRouter.post("/finish",isAuth,finishInterview)
 
 interviewRouter.get("/get-interview",isAuth,getMyInterviews)
+interviewRouter.get("/my-interviews",isAuth,getMyInterviews)
 interviewRouter.get("/report/:id",isAuth,getInterviewReport)
 
 

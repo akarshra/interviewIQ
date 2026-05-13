@@ -2,7 +2,9 @@ import express from "express"
 import dotenv from "dotenv"
 import connectDb from "./config/connectDb.js"
 import cookieParser from "cookie-parser"
-dotenv.config()
+
+dotenv.config({ path: new URL('./.env', import.meta.url).pathname });
+
 import cors from "cors"
 import helmet from "helmet"
 import rateLimit from "express-rate-limit"
@@ -73,10 +75,18 @@ if (process.env.NODE_ENV === "production") {
     });
 }
 
-const PORT = process.env.PORT || 6000
-app.listen(PORT , ()=>{
-    console.log(`Server running on port ${PORT}`)
-    connectDb()
-})
+// Start server only after DB is connected
+(async () => {
+    try {
+        await connectDb();
+        const PORT = process.env.PORT || 8000;
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error("Failed to start server:", error.message);
+        process.exit(1);
+    }
+})();
 
 // Ensures nodemon watches correctly

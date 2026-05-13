@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { FaArrowLeft, FaCheckCircle, FaStar } from 'react-icons/fa'
 import { BsLightningChargeFill } from 'react-icons/bs'
 import { useNavigate } from 'react-router-dom'
-import { motion } from "motion/react";
+import { motion as Motion } from "motion/react";
 import { api } from '../utils/apiClient';
 
 function Pricing() {
@@ -69,7 +69,7 @@ function Pricing() {
       })
       
       if (result.data.url) {
-         window.location.href = result.data.url;
+         window.location.assign(result.data.url);
       }
 
     } catch (error) {
@@ -112,7 +112,7 @@ function Pricing() {
           const isSelected = selectedPlan === plan.id;
 
           return (
-            <motion.div 
+            <Motion.div 
               key={plan.id}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -210,7 +210,7 @@ function Pricing() {
                   }
                 </button>
               )}
-            </motion.div>
+            </Motion.div>
           )
         })}
       </div>

@@ -11,10 +11,9 @@ function InterviewReport() {
       try {
         const result = await api.get("/api/interview/report/" + id)
 
-        console.log(result.data)
         setReport(result.data)
-      } catch (error) {
-        console.log(error)
+      } catch {
+        // Handle error silently
       }
     }
 
