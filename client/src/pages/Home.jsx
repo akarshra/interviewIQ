@@ -69,26 +69,29 @@ function Home() {
     <div onMouseMove={handleMouseMove} className='min-h-screen bg-[#070709] text-white font-sans flex flex-col relative selection:bg-indigo-500/30 selection:text-white overflow-x-hidden'>
       
       {/* Dynamic Ambient Background Elements */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" style={{ willChange: 'transform' }}>
         <Motion.div 
           animate={{ x: [0, 100, 0], y: [0, 50, 0] }} 
           transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[120px]" 
+          style={{ willChange: "transform" }}
         />
         <Motion.div 
           animate={{ x: [0, -100, 0], y: [0, -50, 0] }} 
           transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 2 }}
           className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-cyan-600/10 blur-[120px]" 
+          style={{ willChange: "transform" }}
         />
         <Motion.div 
           animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }} 
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-[40%] left-[40%] w-[800px] h-[400px] rounded-full bg-purple-600/5 blur-[150px]" 
+          style={{ willChange: "transform", opacity: 0.1 }}
         />
       </div>
 
-      {/* Subtle Noise Texture Overlay */}
-      <div className="fixed inset-0 opacity-[0.02] pointer-events-none mix-blend-screen z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+      {/* Subtle Noise Texture Overlay (Replaced SVG filter for performance) */}
+      <div className="fixed inset-0 opacity-[0.02] pointer-events-none z-0 mix-blend-screen" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/stardust.png")' }}></div>
 
       <div className="relative z-10 flex-col flex min-h-screen">
         <Navbar />

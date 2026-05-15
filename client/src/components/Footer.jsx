@@ -1,5 +1,5 @@
 import React from 'react'
-import { BsRobot, BsTwitter, BsGithub, BsLinkedin } from 'react-icons/bs'
+import { BsRobot, BsGithub, BsLinkedin } from 'react-icons/bs'
 
 function Footer() {
   return (
@@ -26,13 +26,10 @@ function Footer() {
               your communication skills, technical depth, and professional confidence frame-by-frame.
             </p>
             <div className='flex items-center gap-4'>
-              <a href="#" className='w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-indigo-500/30 transition-all'>
-                <BsTwitter />
-              </a>
-              <a href="#" className='w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-indigo-500/30 transition-all'>
+              <a href="https://github.com/akarshra" target="_blank" rel="noopener noreferrer" className='w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-indigo-500/30 transition-all'>
                 <BsGithub />
               </a>
-              <a href="#" className='w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-indigo-500/30 transition-all'>
+              <a href="https://linkedin.com/in/akarsh-raj25" target="_blank" rel="noopener noreferrer" className='w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-indigo-500/30 transition-all'>
                 <BsLinkedin />
               </a>
             </div>
